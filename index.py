@@ -6,7 +6,16 @@ import random
 import time
 import numpy as np
 
-# Game constants
+from OpenGL.GLU import gluLookAt
+
+
+
+
+bow_angle = 0
+
+
+
+
 WINDOW_WIDTH = 1200
 WINDOW_HEIGHT = 800
 GRAVITY = -9.8
@@ -37,7 +46,74 @@ disqualified = False
 cheat_mode = False
 auto_aim = False
 last_time = time.time()
-last_shoot_time = 0  
+last_shoot_time = 0
+
+class Target:
+    def __init__(self,x,y,z,size,points):
+        self.x,self.y,self.z=x,y,z
+        self.original_size=size
+        self.size=size
+        self.points=points
+        self.hit=False
+        self.respawn_timer=0
+        self.speed=0
+
+def update_targets(dt):
+    global hits,level
+    for target in targets:
+        if target.hit:
+            target.respawn_timer+=dt
+            if target.respawn_timer>=2.0:
+                target.hit=False
+                target.respawn_timer=0
+                target.speed=1.0+(level*0.7)
+                target.size=max(target.original_size*(1-level*0.12),
+                                target.original_size*0.4)
+
+# Level increments every 6 hits
+def register_hit():
+    global hits,level
+    hits+=1
+    level=hits//6
+
+
+
+def setupCamera():
+    global camera_smooth,camera_look_smooth,camera_up_smooth
+    if camera_mode==0:
+        target_pos=(player_x,100,player_z+200)
+        target_look=(player_x,50,player_z-200)
+        target_up=(0,1,0)
+    elif camera_mode==1:
+        target_pos=(player_x+400,200,player_z)
+        target_look=(player_x,50,player_z-200)
+        target_up=(0,1,0)
+    elif camera_mode==2:
+        target_pos=(player_x,600,player_z-200)
+        target_look=(player_x,0,player_z-200)
+        target_up=(0,0,-1)
+    elif camera_mode==3:
+        angle_rad=math.radians(bow_angle)
+        v_angle=math.radians(bow_vertical_angle)
+        dx,dy,dz=math.sin(angle_rad)*math.cos(v_angle),math.sin(v_angle),-math.cos(angle_rad)*math.cos(v_angle)
+        target_pos=(player_x,50,player_z)
+        target_look=(player_x+dx*100,50+dy*100,player_z+dz*100)
+        target_up=(0,1,0)
+
+    for i in range(3):
+        camera_smooth[i]+=(target_pos[i]-camera_smooth[i])*0.1
+        camera_look_smooth[i]+=(target_look[i]-camera_look_smooth[i])*0.1
+        camera_up_smooth[i]+=(target_up[i]-camera_up_smooth[i])*0.1
+
+    gluLookAt(camera_smooth[0],camera_smooth[1],camera_smooth[2],
+              camera_look_smooth[0],camera_look_smooth[1],camera_look_smooth[2],
+              camera_up_smooth[0],camera_up_smooth[1],camera_up_smooth[2])
+
+level=0
+hits=0
+targets=[]
+
+
 
 class Target:
     def __init__(self, x, y, z, size, points):
